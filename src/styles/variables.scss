@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap');
+
+
+$Poppins: 'Poppins', sans-serif;
+// base color
+$dark: rgb(29,29,29);
+$light: #fff;
+$primary: rgb(88, 222, 232);
+$bg-dark: rgb(44, 44, 44);
+$btndelete: rgb(226, 116, 26);
+$btnsubmit: #4f4544;
+
+$spacing-medium: 16px;
+$spacing-large: 32px;
+
+@mixin breakpoint($point) {
+    @if $point == medium {
+        @media (min-width: 740px) {
+            @content;
+        }
+    }
+}
