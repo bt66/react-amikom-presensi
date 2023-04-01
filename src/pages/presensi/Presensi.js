@@ -126,23 +126,12 @@ const PresensiPage = () => {
                 native: false // when using native, your OS will handle theming.
             });
             console.log(error.response.status)
-            // setNotification({
-            //     showNotification: true,
-            //     msg: [...notification.msg, error.response.status]
-            // })
         })
     }
     // request to presensi rest API
     const presensi = (event) => {
         event.preventDefault();
         setIsLoading(true)
-
-        // setNotification({
-        //     showNotification: false,
-        //     msg: []
-        // })
-        // console.log('ini notif msg kosong')
-        // console.log(notification.msg)
         axios.post(`https://proxy-cors.carakan.id/https://ds.amikom.ac.id/api/amikomone/presensi_mobile/validate_qr_code`,JSON.stringify({
                 "data": `${data};${localStorage.getItem('nim')}`,
                 "location": "Amikom"
