@@ -1,28 +1,35 @@
 import Header from "../../components/Header";
-import React, { useEffect, useState } from 'react';
+import React, { useState,useRef } from 'react';
 import { QrReader } from 'react-qr-reader';
 import classes from "./Presensi.module.scss";
-import Notification from "./Notification";
+import { Notifications } from 'react-push-notification';
+import addNotification from 'react-push-notification';
 import axios from "axios";
 import Slider from '@mui/material/Slider';
+import ReactLoading from "react-loading";
+// import Loading from '../../components/Loading';
 
 const PresensiPage = () => {
+
+    const loadingRef = useRef();
+    console.log(loadingRef)
+
     const [data, setData] = useState('No result');
     const [dataMHS, setdataMHS] = useState({
-        formData: "",
-        nim: []
+        nim: "",
+        device_id: "",
+        pw: ""
     })
+    const [localStorageState, setLocalStorageState] = useState({
+        nim: `${localStorage.getItem('nim')}`,
+        device_id: `${localStorage.getItem('device_id')}`,
+        pw: `${localStorage.getItem('pw')}`,
+    })
+    
+    const [token, setToken] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [zoomData, setZoomData] = useState('')
-    const [qrZoom, setQrZoom] = useState('')
-    const [notification, setNotification] = useState({
-        showNotification: false,
-        msg: []
-    })
 
-    useEffect(() => {
-        setQrZoom(zoomData)
-        
-    }, [zoomData])
     function handleClear(e) {
         e.preventDefault();
         setData('No result');
@@ -31,88 +38,178 @@ const PresensiPage = () => {
         console.log("submitted")
         event.preventDefault();
         console.log(dataMHS);
+        localStorage.setItem('nim', dataMHS.nim)
+        localStorage.setItem('pw', dataMHS.pw)
+        localStorage.setItem('device_id', dataMHS.device_id)
+        setLocalStorageState(dataMHS)
+        addNotification({
+            title: 'Success',
+            subtitle: `Data is saved`,
+            message: `NIM : ${dataMHS.nim} Data mhs : ${dataMHS.pw} Device ID : ${dataMHS.device_id}`,
+            theme: 'green',
+            native: false // when using native, your OS will handle theming.
+        });
         setdataMHS({
-            nim: [...dataMHS.nim, dataMHS.formData],
-            formData: ""
+            nim: "",
+            device_id: "",
+            pw: ""
         })
     }
-    const handleChange = (event) => {
-        // event.preventDefault();
-        setdataMHS({
-            formData: event.target.value,
-            nim: [...dataMHS.nim]
-        })
-        console.log(event.target.value)
-
+    const handleInputChange = (event) => {
+        const {name, value} = event.target;
+        setdataMHS((prevProps) => ({
+            ...prevProps,
+            [name]: value
+        }))
     }
-
+    
     const handleChangeSlider = (event) => {
         setZoomData(event.target.value)
-        localStorage.setItem('ngezoom', JSON.stringify(event.target.value))
+        // localStorage.setItem('ngezoom', JSON.stringify(event.target.value))
         console.log(zoomData)
+    }
+    
+    
+    // handle clear localstorage
+    const hadleDeleteLocalStorage = (event) => {
+        localStorage.removeItem("nim")
+        localStorage.removeItem("pw")
+        localStorage.removeItem("device_id")
+        setLocalStorageState({
+            nim: "",
+            device_id: "",
+            pw: ""
+        })
+        addNotification({
+            title: 'Success',
+            subtitle: "Delete data success",
+            theme: 'green',
+            native: false // when using native, your OS will handle theming.
+        });
+    }
+    // request to get token rest API
+    const handleGetToken = (event) => {
+        setIsLoading(true)
+        console.log(loadingRef)
+        axios.post(`https://proxy-cors.carakan.id/https://ds.amikom.ac.id/api/amikomone/auth`,new URLSearchParams({
+            user_id:`${localStorage.getItem('nim')}`,
+            password: `${localStorage.getItem('pw')}`,
+            device_id: `${localStorage.getItem('device_id')}`
+        }),
+        {
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded', 
+                'Host': 'ds.amikom.ac.id', 
+                'User-Agent': 'okhttp/5.0.0-alpha.2'
+            },
+        }).then((resp => {
+            setIsLoading(false)
+            console.log(resp.data.access_token)
+            setToken(resp.data.access_token)
+            addNotification({
+                title: 'Success',
+                subtitle: "Get token success",
+                message: `your token : ${resp.data.access_token}`,
+                theme: 'green',
+                native: false // when using native, your OS will handle theming.
+            });
+            console.log('ini no err')
+            // console.log(notification.msg)
+        })
+        ).catch((error) => {
+            setIsLoading(false)
+            addNotification({
+                title: 'Get token failed',
+                subtitle: `Status code : ${error.response.status}`,
+                message: `Ensure you fill data mhs correctly`,
+                theme: 'success',
+                native: false // when using native, your OS will handle theming.
+            });
+            console.log(error.response.status)
+            // setNotification({
+            //     showNotification: true,
+            //     msg: [...notification.msg, error.response.status]
+            // })
+        })
     }
     // request to presensi rest API
     const presensi = (event) => {
         event.preventDefault();
+        setIsLoading(true)
 
-        setNotification({
-            showNotification: false,
-            msg: []
-        })
+        // setNotification({
+        //     showNotification: false,
+        //     msg: []
+        // })
         // console.log('ini notif msg kosong')
         // console.log(notification.msg)
-        dataMHS.nim.map((npm, index) => {
-            axios.post('https://dev-backend-pr.tranto.tk/',{
-                qrData:`${data}`,
-                nim: `${npm}`
-            },
+        axios.post(`https://proxy-cors.carakan.id/https://ds.amikom.ac.id/api/amikomone/presensi_mobile/validate_qr_code`,JSON.stringify({
+                "data": `${data};${localStorage.getItem('nim')}`,
+                "location": "Amikom"
+            }),
             {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Host': 'ds.amikom.ac.id', 
+                    'User-Agent': 'okhttp/5.0.0-alpha.2', 
+                    'Authorization': `Bearer ${token}`
+                },
             }).then((resp => {
+                setIsLoading(false)
+                addNotification({
+                    title: 'Success',
+                    subtitle: `Response code ${resp.response.status}`,
+                    message: `Presence success`,
+                    theme: 'green',
+                    native: false // when using native, your OS will handle theming.
+                });
                 // console.log('ini response')
-                // console.log(resp)
-                setNotification({
-                    showNotification: true,
-                    msg: [...notification.msg, resp.status]
-                })
+                console.log(resp.data)
+                // setNotification({
+                //     showNotification: true,
+                //     msg: [...notification.msg, resp.status]
+                // })
                 console.log('ini no err')
-                console.log(notification.msg)
-            })
-            ).catch((error) => {
-                // console.log(error.response.status)
-                setNotification({
-                    showNotification: true,
-                    msg: [...notification.msg, error.response.status]
-                })
-                // console.log('ini error')
                 // console.log(notification.msg)
             })
-        })
-
-        setTimeout(() => {
-            setNotification({
-                showNotification: false,
-                msg: []
-            });
-        }, 5000);
+            ).catch((error) => {
+                setIsLoading(false)
+                addNotification({
+                    title: 'Failed',
+                    message: `Response code ${error.message}`,
+                    subtitle: `${error.code}`,
+                    theme: 'red',
+                    native: false // when using native, your OS will handle theming.
+                });
+                console.log(error)
+            }
+        )
     }
 
 
     return(
         <div className={classes.content}>
-            <Header/>
-            { notification.showNotification &&
-                <div className={classes.content__notification}>
-                    {notification.msg.map((message, index) => {
-                        console.log(`${index}-${message}`)
-                    })}
-                    <Notification msg={notification.msg}/>
+            {isLoading ? 
+                <div ref={loadingRef} className={`${classes.content__loadingScreen}`}>
+                    <div className={classes.content__loadingScreen__icon}>
+                        <ReactLoading type="spin" color="rgb(226, 116, 26)" height={100} width={100} />
+                    </div>
                 </div>
+            :
+            <div ref={loadingRef} className={`${classes.content__loadingScreenHidden}`}>
+                <div className={classes.content__loadingScreen__icon}>
+                    <ReactLoading type="spin" color="rgb(226, 116, 26)" height={100} width={100} />
+                </div>
+            </div>
             }
-            <div>
-                {/* <QrReader
+            <Notifications />
+            {/* <div ref={loadingRef} className={classes.content__loadingScreen}>
+                <Loading />
+            </div> */}
+            <Header/>
+            <div className={classes.content__qrConteiner}>
+                <QrReader
+                    key={zoomData}
                     onResult={(result, error) => {
                     if (!!result) {
                         setData(result?.text);
@@ -123,14 +220,17 @@ const PresensiPage = () => {
                     }
                     }}
                     style={{ width: '100%'}}
+                    // cameraStyle={{ height: 200, marginTop: 20, width: 200, alignSelf: 'center', justifyContent: 'center' }}
                     constraints={{
                         facingMode: 'environment',
-                        zoom: JSON.parse(localStorage.getItem('ngezoom'))
+                        zoom: zoomData
+                        // zoom: JSON.parse(localStorage.getItem('ngezoom'))
                         // advanced: [{}]
                     }}
-                /> */}
+                />
             </div>
-            <p>{JSON.parse(localStorage.getItem('ngezoom'))}</p>
+            <p>{process.env.REACT_APP_DEPLOYMENT_URL}</p>
+            <h3>Zoom value : {zoomData}</h3>
             <div className={classes.content__sliderContainer}>
                 <Slider
                     size="small"
@@ -144,42 +244,74 @@ const PresensiPage = () => {
                 />
             </div>
             <div className={classes.content__form}>
-                <p>Qrcode Data :</p>
+                <h3>Qrcode Data :</h3>
                 <p className={classes.content__form__qrResult}>{data}</p>
-                <button onClick={handleClear} className={classes.btnDelete}>Clear QR Data</button>
-                <div>
-                    <p>Input your NIM : </p>    
+                <div className={classes.content__buttonActionContainer}>
+                    <div className={classes.content__buttonActionContainer__buttonAction}>
+                        <button onClick={handleGetToken} className={classes.btnSubmit}>Get Token</button>
+                        <button onClick={handleClear} className={classes.btnDelete}>Clear QR Data</button>
+                        <button onClick={presensi} className={classes.btnOk}>Presensi!</button>
+                    </div>
+                </div>
+                <h3>Input your data : </h3>
+                <div className={classes.content__form__inputDataContainer}>
                     <form onSubmit={handleSubmit}>
-                        <input type="text" 
-                            name="nim"
-                            value={dataMHS.formData}
-                            placeholder="nim"
-                            onChange={handleChange}
-                            className={classes.inputForm}
-                        />
-                        <input type="submit" className={classes.btnSubmit}/>
+                        <div className={classes.content__form__inputDataContainer__content}>
+                            <input 
+                                type="nim" 
+                                name="nim" 
+                                placeholder='nim' 
+                                value={dataMHS.nim}
+                                onChange={handleInputChange}
+                                className={classes.inputForm}/>
+                        </div>
+                        <div className={classes.content__form__inputDataContainer__content}>
+                            <input 
+                                type="device_id" 
+                                name="device_id" 
+                                placeholder='device_id' 
+                                value={dataMHS.device_id}
+                                onChange={handleInputChange}
+                                className={classes.inputForm}/>
+                        </div>
+                        <div className={classes.content__form__inputDataContainer__content}>
+                            <input 
+                                type="password" 
+                                name="pw" 
+                                placeholder='pw' 
+                                value={dataMHS.pw}
+                                onChange={handleInputChange}
+                                className={classes.inputForm}/>
+                        </div>
+                        <div className={classes.content__form__inputDataContainer__inputButton}>
+                            <input type="submit" className={classes.btnOk} />
+                        </div>
                     </form>
                 </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>No</th>
-                            <th>NIM</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {dataMHS.nim.map(( data, index) => 
-                            <tr key={index}>
-                                <td>{index+1}</td>
-                                <td>{data}</td>
-                                <td><p>delete</p></td>
-                            </tr>
-                        )}
-                    </tbody>
-                    
-                </table>
-                <button onClick={presensi} className={classes.btnSubmit}>Presensi!</button>
+                <div className={classes.content__form__datamhsContainer}>
+                    <h3>Your data : </h3>
+                    <div className={classes.content__form__datamhsContainer__tabel}>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <th>NIM</th>
+                                    <td>{localStorageState.nim}</td>
+                                </tr>
+                                <tr>
+                                    <th>Password</th>
+                                    <td>{localStorageState.pw}</td>
+                                </tr>
+                                <tr>
+                                    <th>Device ID</th>
+                                    <td>{localStorageState.device_id}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className={classes.content__form__datamhsContainer__buttonDeleteConteiner}>
+                        <button onClick={hadleDeleteLocalStorage} className={classes.btnDelete}>delete data mhs</button>
+                    </div>
+                </div>
             </div>
         </div>
     )

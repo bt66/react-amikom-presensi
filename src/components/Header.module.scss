@@ -4,6 +4,9 @@
     width: 100%;
     background: $dark;
     margin: 0px;
+    position: sticky;
+    top: 0px;
+    z-index: 9;
 
     &__content {
         padding: 20px;
