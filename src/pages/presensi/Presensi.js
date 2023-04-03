@@ -158,19 +158,46 @@ const PresensiPage = () => {
                 //     showNotification: true,
                 //     msg: [...notification.msg, resp.status]
                 // })
-                console.log('ini no err')
+                // console.log('ini no err')
                 // console.log(notification.msg)
             })
             ).catch((error) => {
                 setIsLoading(false)
-                addNotification({
-                    title: 'Failed',
-                    message: `Response code ${error.message}`,
-                    subtitle: `${error.code}`,
-                    theme: 'red',
-                    native: false // when using native, your OS will handle theming.
-                });
-                console.log(error)
+                // addNotification({
+                //     title: 'Failed',
+                //     message: `Response code ${error.message}`,
+                //     subtitle: `${error.code}`,
+                //     theme: 'red',
+                //     native: false // when using native, your OS will handle theming.
+                // });
+                // console.log(error.response.status)
+                // console.log(typeof(error.response.status))
+                if(`${error.response.status}` == '422') {
+                    addNotification({
+                        title: 'Already Presence',
+                        subtitle: `Status code : ${error.response.status}`,
+                        message: `You Already Presence`,
+                        theme: 'light',
+                        native: false // when using native, your OS will handle theming.
+                    });
+                }else if (`${error.response.status}` == '401') {
+                    addNotification({
+                        title: 'Presence Failed',
+                        subtitle: `Status code : ${error.response.status}`,
+                        message: `Check your credential and ensure your qr code are valid`,
+                        theme: 'red',
+                        native: false // when using native, your OS will handle theming.
+                    });
+                }else {
+                    addNotification({
+                        title: 'Failed',
+                        message: `Response code ${error.message}`,
+                        subtitle: `${error.code}`,
+                        theme: 'red',
+                        native: false // when using native, your OS will handle theming.
+                    });
+                }
+                // console.log(error)
             }
         )
     }
