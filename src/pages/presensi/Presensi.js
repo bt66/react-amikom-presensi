@@ -206,6 +206,118 @@ const PresensiPage = () => {
     }
 
 
+    const presenceWithGetTokenFirst = (event) => {
+        event.preventDefault();
+        setIsLoading(true)
+
+        // get token
+        axios.post(`https://proxy-cors.carakan.id/https://ds.amikom.ac.id/api/amikomone/auth`,new URLSearchParams({
+            user_id:`${localStorage.getItem('nim')}`,
+            password: `${localStorage.getItem('pw')}`,
+            device_id: `${localStorage.getItem('device_id')}`
+        }),
+        {
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded', 
+                'Host': 'ds.amikom.ac.id', 
+                'User-Agent': 'okhttp/5.0.0-alpha.2'
+            },
+        }).then((resp => {
+            // console.log(resp.data.access_token)
+            // console.log(resp.status)
+            addNotification({
+                title: 'Success',
+                subtitle: "Get token success",
+                message: `your token : ${resp.data.access_token}`,
+                theme: 'green',
+                native: false // when using native, your OS will handle theming.
+            });
+            setToken(resp.data.access_token)
+
+            axios.post(`https://proxy-cors.carakan.id/https://ds.amikom.ac.id/api/amikomone/presensi_mobile/validate_qr_code`,JSON.stringify({
+                    "data": `${data};${localStorageState.nim}`,
+                    "location": "Amikom"
+                }),
+                {
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Host': 'ds.amikom.ac.id', 
+                        'User-Agent': 'okhttp/5.0.0-alpha.2', 
+                        'Authorization': `Bearer ${resp.data.access_token}`
+                    },
+                }).then((resp => {
+                    setIsLoading(false)
+                    // console.log(resp.status)
+                    addNotification({
+                        title: 'Success',
+                        subtitle: "Presence Success",
+                        message: `Success with status ${resp.status}`,
+                        theme: 'green',
+                        native: false // when using native, your OS will handle theming.
+                    });
+                    // console.log('ini response')
+                    console.log(resp.data)
+                    // setNotification({
+                    //     showNotification: true,
+                    //     msg: [...notification.msg, resp.status]
+                    // })
+                    // console.log('ini no err')
+                    // console.log(notification.msg)
+                })
+                ).catch((error) => {
+                    setIsLoading(false)
+                    // addNotification({
+                    //     title: 'Failed',
+                    //     message: `Response code ${error.message}`,
+                    //     subtitle: `${error.code}`,
+                    //     theme: 'red',
+                    //     native: false // when using native, your OS will handle theming.
+                    // });
+                    // console.log(error.response.status)
+                    // console.log(typeof(error.response.status))
+                    if(`${error.response.status}` == '422') {
+                        addNotification({
+                            title: 'Already Presence',
+                            subtitle: `Status code : ${error.response.status}`,
+                            message: `You Already Presence`,
+                            theme: 'light',
+                            native: false // when using native, your OS will handle theming.
+                        });
+                    }else if (`${error.response.status}` == '401') {
+                        addNotification({
+                            title: 'Presence Failed',
+                            subtitle: `Status code : ${error.response.status}`,
+                            message: `Check your credential and ensure your qr code are valid`,
+                            theme: 'red',
+                            native: false // when using native, your OS will handle theming.
+                        });
+                    }else {
+                        addNotification({
+                            title: 'Failed',
+                            message: `Response code ${error.message}`,
+                            subtitle: `${error.code}`,
+                            theme: 'red',
+                            native: false // when using native, your OS will handle theming.
+                        });
+                    }
+                    // console.log(error)
+                })
+
+        })
+        ).catch((error) => {
+            setIsLoading(false)
+            addNotification({
+                title: 'Get token failed',
+                subtitle: `Status code : ${error.response.status}`,
+                message: `Ensure you fill data mhs correctly`,
+                theme: 'success',
+                native: false // when using native, your OS will handle theming.
+            });
+            console.log(error.response.status)
+        })
+    } 
+
+
     return(
         <div className={classes.content}>
             {isLoading ? 
@@ -265,6 +377,13 @@ const PresensiPage = () => {
             <div className={classes.content__form}>
                 <h3>Qrcode Data :</h3>
                 <p className={classes.content__form__qrResult}>{data}</p>
+                <p>automatic methode :</p>
+                <div className={classes.content__buttonActionContainer}>
+                    <div className={classes.content__buttonActionContainer__buttonAction}>
+                        <button onClick={presenceWithGetTokenFirst} className={classes.btnOk}>Presence include get token</button>
+                    </div>
+                </div>
+                <p>manual methode :</p>
                 <div className={classes.content__buttonActionContainer}>
                     <div className={classes.content__buttonActionContainer__buttonAction}>
                         <button onClick={handleGetToken} className={classes.btnSubmit}>Get Token</button>
