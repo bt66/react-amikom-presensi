@@ -14,6 +14,7 @@ const PresensiPage = () => {
     const loadingRef = useRef();
     console.log(loadingRef)
 
+    // qr and code data
     const [data, setData] = useState('No result');
     const [dataMHS, setdataMHS] = useState({
         nim: "",
@@ -28,7 +29,7 @@ const PresensiPage = () => {
     
     const [token, setToken] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [zoomData, setZoomData] = useState('')
+    const [zoomData, setZoomData] = useState('');
 
     function handleClear(e) {
         e.preventDefault();
@@ -104,8 +105,9 @@ const PresensiPage = () => {
             },
         }).then((resp => {
             setIsLoading(false)
-            console.log(resp.data.access_token)
+            // console.log(resp.data.access_token)
             setToken(resp.data.access_token)
+            // console.log(resp.status)
             addNotification({
                 title: 'Success',
                 subtitle: "Get token success",
@@ -145,10 +147,11 @@ const PresensiPage = () => {
                 },
             }).then((resp => {
                 setIsLoading(false)
+                // console.log(resp.status)
                 addNotification({
                     title: 'Success',
-                    subtitle: `Response code ${resp.response.status}`,
-                    message: `Presence success`,
+                    subtitle: "Presence Success",
+                    message: `Success with status ${resp.status}`,
                     theme: 'green',
                     native: false // when using native, your OS will handle theming.
                 });
